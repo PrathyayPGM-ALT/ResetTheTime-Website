@@ -9,21 +9,20 @@ On Render:      gunicorn app:app   (see render.yaml)
 """
 
 import os
-import json
 import re
-import datetime
+from io import BytesIO
 
 from flask import (Flask, request, render_template, redirect, url_for,
                    send_file, abort, jsonify)
 
 import scanner
+import store as store_mod
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-# DATA_DIR can point at a Render persistent disk so uploads survive restarts.
+# DATA_DIR is the local-fallback location (used when Supabase isn't configured).
 DATA_DIR = os.environ.get('DATA_DIR', BASE)
-STORE = os.path.join(DATA_DIR, 'mods_store')      # published .rttmod files
-INDEX = os.path.join(DATA_DIR, 'index.json')
-os.makedirs(STORE, exist_ok=True)
+# Durable when SUPABASE_URL + SUPABASE_SERVICE_KEY are set; local otherwise.
+store = store_mod.get_store(DATA_DIR)
 
 # Game builds (Windows .exe, macOS .app zip, ...) dropped in here are served
 # straight from the site. Anything in this folder shows up on /download.
@@ -95,25 +94,6 @@ def inject_globals():
             'game_download_url': GAME_DOWNLOAD_URL}
 
 
-def load_index():
-    try:
-        with open(INDEX, encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def save_index(idx):
-    tmp = INDEX + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(idx, f, indent=2)
-    os.replace(tmp, INDEX)
-
-
-def now_iso():
-    return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
-
-
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -133,9 +113,11 @@ def serve_build(filename):
 
 @app.route('/mods')
 def mods_hub():
-    idx = load_index()
-    mods = sorted(idx.values(), key=lambda m: m.get('uploaded_at', ''),
-                  reverse=True)
+    try:
+        mods = store.list_mods()
+    except Exception as e:
+        print('list_mods failed:', e)
+        mods = []
     return render_template('mods.html', mods=mods)
 
 
@@ -156,35 +138,19 @@ def upload():
         return render_template('upload.html', report=result.to_dict(),
                                filename=f.filename)
 
-    meta = result.meta
-    mid = str(meta['id'])
-    idx = load_index()
-    path = os.path.join(STORE, mid + '.rttmod')
-    with open(path, 'wb') as out:
-        out.write(data)
-
-    record = idx.get(mid, {})
-    record.update({
-        'id': mid,
-        'name': str(meta.get('name', mid)),
-        'author': str(meta.get('author', 'unknown')),
-        'version': str(meta.get('version', '')),
-        'description': str(meta.get('description', '')),
-        'sha256': result.sha256,
-        'size': len(data),
-        'uploaded_at': now_iso(),
-        'downloads': record.get('downloads', 0),
-        'scan': [x.to_dict() for x in result.findings],
-    })
-    idx[mid] = record
-    save_index(idx)
-    return redirect(url_for('mod_page', mod_id=mid))
+    try:
+        rec = store.save_mod(result.meta, data, result.findings)
+    except Exception as e:
+        print('save_mod failed:', e)
+        return render_template(
+            'upload.html', filename=f.filename,
+            report={'error': 'Passed scanning, but saving failed: %s' % e})
+    return redirect(url_for('mod_page', mod_id=rec['id']))
 
 
 @app.route('/mod/<mod_id>')
 def mod_page(mod_id):
-    idx = load_index()
-    mod = idx.get(mod_id)
+    mod = store.get_mod(mod_id)
     if not mod:
         abort(404)
     return render_template('mod.html', mod=mod)
@@ -194,29 +160,35 @@ def mod_page(mod_id):
 def download_mod(mod_id):
     if not re.match(r'^[a-z0-9_]{2,40}$', mod_id):
         abort(400)
-    idx = load_index()
-    mod = idx.get(mod_id)
-    path = os.path.join(STORE, mod_id + '.rttmod')
-    if not mod or not os.path.isfile(path):
+    mod = store.get_mod(mod_id)
+    if not mod:
         abort(404)
-    mod['downloads'] = mod.get('downloads', 0) + 1
-    save_index(idx)
-    return send_file(path, as_attachment=True,
-                     download_name=mod_id + '.rttmod',
-                     mimetype='text/plain')
+    store.increment_download(mod_id)
+    pub = store.public_url(mod_id)
+    if pub:
+        return redirect(pub)
+    data = store.read_mod_bytes(mod_id)
+    if data is None:
+        abort(404)
+    return send_file(BytesIO(data), as_attachment=True,
+                     download_name=mod_id + '.rttmod', mimetype='text/plain')
 
 
 @app.route('/api/mods')
 def api_mods():
     """Machine-readable catalogue the game could pull to list downloads."""
-    idx = load_index()
+    try:
+        rows = store.list_mods()
+    except Exception as e:
+        print('list_mods failed:', e)
+        rows = []
     mods = [{
         'id': m['id'], 'name': m['name'], 'author': m['author'],
         'version': m['version'], 'description': m['description'],
         'sha256': m['sha256'], 'size': m['size'],
         'downloads': m.get('downloads', 0),
         'download_url': url_for('download_mod', mod_id=m['id'], _external=True),
-    } for m in idx.values()]
+    } for m in rows]
     mods.sort(key=lambda m: m['name'].lower())
     return jsonify({'mods': mods})
 

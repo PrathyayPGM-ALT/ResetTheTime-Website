@@ -52,11 +52,29 @@ This folder is self-contained — push it to its own repo and either:
 - create a **Web Service**: build `pip install -r requirements.txt`,
   start `gunicorn app:app`.
 
-`render.yaml` also declares a 1 GB persistent disk mounted at `/var/data` with
-`DATA_DIR=/var/data`, so uploaded mods and the index survive restarts. Without a
-disk, Render's filesystem is ephemeral and uploads are wiped on redeploy.
-
 Set `VT_API_KEY` in the Render dashboard to turn on VirusTotal.
+
+## Storage: Supabase (recommended for durable mods)
+
+Game builds in `builds/` ship with the repo, so they always persist. **Uploaded
+mods**, however, are written at runtime — and on Render's free plan the
+filesystem is ephemeral, so they'd be wiped on every redeploy. To keep uploaded
+mods durable and downloadable by everyone, back them with Supabase:
+
+1. In your Supabase project, open **SQL Editor**, paste
+   [`supabase_setup.sql`](supabase_setup.sql), and **Run**. This creates the
+   `mods` table and a public `mods` storage bucket (with read policies).
+2. In Render (or your local `.env`) set:
+   - `SUPABASE_URL` — e.g. `https://xxxx.supabase.co`
+   - `SUPABASE_SERVICE_KEY` — the **service_role** key (Project Settings → API).
+     This is a server-side secret; never commit it or expose it to clients.
+
+With both set, the app stores `.rttmod` files in the bucket and metadata in the
+table. Without them, it transparently falls back to local files (fine for dev).
+
+The `service_role` key bypasses row-level security, so only the server (after a
+mod passes scanning) can write; the public can read/download but never upload
+directly.
 
 After it's live, update `WEBSITE_URL` in the game's `modloader.py` so the
 **GET MODS** button opens your deployed site.
