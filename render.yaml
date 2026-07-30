@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: resetthetime
+    name: resetthetime-website
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
