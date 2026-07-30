@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ mod.name }} - Reset The Time mods{% endblock %}
+{% block body %}
+<section class="detail">
+  <a class="back" href="{{ url_for('mods_hub') }}">&lsaquo; all mods</a>
+  <h1>{{ mod.name }}</h1>
+  <div class="meta">
+    <span>v{{ mod.version or '?' }}</span>
+    <span>by {{ mod.author }}</span>
+    <span>&darr; {{ mod.downloads }} downloads</span>
+  </div>
+  <p class="desc">{{ mod.description }}</p>
+
+  <a class="cta big" href="{{ url_for('download_mod', mod_id=mod.id) }}">Download .rttmod</a>
+
+  <div class="install">
+    <h2>Install</h2>
+    <ol>
+      <li>Download the <code>{{ mod.id }}.rttmod</code> file.</li>
+      <li>Put it in your Downloads, Desktop, or the game's mods folder
+          (Settings &rsaquo; Mods &rsaquo; <strong>Mods folder</strong>).</li>
+      <li>In the game, open <strong>Settings &rsaquo; Mods</strong>, hit
+          <strong>Refresh</strong>, and switch it <strong>ON</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="scanbox">
+    <h2>Scan report</h2>
+    <p class="hash">sha256 {{ mod.sha256 }}</p>
+    <ul class="findings">
+      {% for f in mod.scan %}
+        <li class="f-{{ f.level }}">
+          <span class="tag">{{ f.level|upper }}</span>
+          <span class="code">{{ f.code }}</span>
+          {{ f.message }}
+        </li>
+      {% else %}
+        <li class="f-warn"><span class="tag">OK</span> nothing flagged</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}

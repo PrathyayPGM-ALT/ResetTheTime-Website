@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Reset The Time - Mods{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="site">
+    <a class="brand" href="{{ url_for('home') }}">RESET&nbsp;THE&nbsp;TIME</a>
+    <nav>
+      <a class="navlink {{ 'active' if request.endpoint == 'home' }}" href="{{ url_for('home') }}">About</a>
+      <a class="navlink {{ 'active' if request.endpoint == 'game_download' }}" href="{{ url_for('game_download') }}">Download</a>
+      <a class="navlink {{ 'active' if request.endpoint in ['mods_hub', 'mod_page'] }}" href="{{ url_for('mods_hub') }}">Mods</a>
+      <a class="cta {{ 'active' if request.endpoint == 'upload' }}" href="{{ url_for('upload') }}">Upload a mod</a>
+    </nav>
+  </header>
+  <main>
+    {% block body %}{% endblock %}
+  </main>
+  <footer>
+    <p>Every upload is scanned for unsafe code, malware and inappropriate
+       content before it appears here. Mods are community-made &mdash; only
+       enable mods you trust.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Upload a mod - Reset The Time{% endblock %}
+{% block body %}
+<section class="upload">
+  <h1>Upload a mod</h1>
+  <p>Pick a <code>.rttmod</code> file. It is scanned before publishing:
+     structure &amp; manifest, a static-safety allowlist (no file, network or
+     process access), a profanity/appropriateness filter, and &mdash; if
+     configured &mdash; a VirusTotal check.</p>
+
+  <form method="post" enctype="multipart/form-data" class="uploader">
+    <input type="file" name="modfile" accept=".rttmod" required>
+    <button type="submit">Scan &amp; publish</button>
+  </form>
+
+  {% if report %}
+    {% if report.error %}
+      <div class="report bad"><h2>Upload failed</h2><p>{{ report.error }}</p></div>
+    {% else %}
+      <div class="report {{ 'bad' if report.blocked else 'good' }}">
+        <h2>{{ 'Rejected' if report.blocked else 'Approved' }}
+            {% if filename %}<small>{{ filename }}</small>{% endif %}</h2>
+        {% if report.blocked %}
+          <p>This file was <strong>not published</strong>. Fix the blocking
+             issues below and try again.</p>
+        {% endif %}
+        {% if report.sha256 %}<p class="hash">sha256 {{ report.sha256 }}</p>{% endif %}
+        <ul class="findings">
+          {% for f in report.findings %}
+            <li class="f-{{ f.level }}">
+              <span class="tag">{{ f.level|upper }}</span>
+              <span class="code">{{ f.code }}</span>
+              {{ f.message }}
+            </li>
+          {% else %}
+            <li class="f-warn"><span class="tag">OK</span> nothing flagged</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <details class="spec">
+    <summary>What a .rttmod looks like</summary>
+<pre>MOD = {
+    'id': 'colored_blocks',
+    'name': 'Colored Blocks',
+    'author': 'you',
+    'version': '1.0.0',
+    'description': 'Give every block its own colour.',
+}
+
+def apply(api):
+    def colorize(value, y, x, default):
+        if value == 1:           # a falling piece
+            return (255, 80, 120)
+        return None              # keep the default
+    api.on_block_color(colorize)</pre>
+    <p>Allowed imports: {{ allowed }}. No <code>os</code>, <code>sys</code>,
+       <code>subprocess</code>, <code>open</code>, <code>eval</code>,
+       <code>exec</code>, networking, or reflection tricks.</p>
+  </details>
+</section>
+{% endblock %}

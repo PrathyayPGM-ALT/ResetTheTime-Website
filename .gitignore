@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Local upload storage (regenerated at runtime; on Render use a persistent disk)
+mods_store/
+data/
+index.json
+*.rttmod

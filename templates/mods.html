@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Mods - Reset The Time{% endblock %}
+{% block body %}
+<section class="hero compact">
+  <h1>Mods</h1>
+  <p>Download community mods and drop them in your game's mods folder, then
+     enable them under <strong>Settings &rsaquo; Mods</strong>. Made one?
+     <a href="{{ url_for('upload') }}">Add it</a> &mdash; every upload is
+     scanned before it goes live.</p>
+  <a class="cta big" href="{{ url_for('upload') }}">Upload a mod</a>
+</section>
+
+{% if mods %}
+<section class="grid">
+  {% for mod in mods %}
+  <div class="card">
+    <a class="cardlink" href="{{ url_for('mod_page', mod_id=mod.id) }}">
+      <h3>{{ mod.name }}</h3>
+      <p class="desc">{{ mod.description }}</p>
+    </a>
+    <div class="meta">
+      <span>v{{ mod.version or '?' }}</span>
+      <span>by {{ mod.author }}</span>
+      <span>&darr; {{ mod.downloads }}</span>
+    </div>
+    <div class="cardfoot">
+      <span class="verified">&#10003; scanned</span>
+      <a class="btn small" href="{{ url_for('download_mod', mod_id=mod.id) }}">Download</a>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% else %}
+<section class="empty">
+  <p>No mods published yet. Be the first &mdash;
+     <a href="{{ url_for('upload') }}">upload one</a>.</p>
+</section>
+{% endif %}
+{% endblock %}

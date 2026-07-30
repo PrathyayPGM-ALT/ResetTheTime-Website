@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Download - Reset The Time{% endblock %}
+{% block body %}
+<section class="detail">
+  <h1>Download Reset The Time</h1>
+  <p class="lede">Grab a build and start repairing the clock.</p>
+
+  <div class="dlgrid">
+    {% for b in builds %}
+    <a class="dlcard" href="{{ b.href }}"{% if b.external %} rel="noopener"{% endif %}>
+      <span class="os">{{ b.platform }}</span>
+      <span class="fname">{{ b.label }}</span>
+      <span class="dlmeta">
+        {% if b.size %}{{ b.size }}{% elif b.external %}via releases{% endif %}
+      </span>
+      <span class="go">Download &rarr;</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="install">
+    <h2>Windows</h2>
+    <ol>
+      <li>Download <code>ResetTheTime.exe</code>.</li>
+      <li>Double-click it. Windows may warn about an unknown publisher &mdash;
+          choose <em>More info &rsaquo; Run anyway</em>.</li>
+    </ol>
+  </div>
+
+  <div class="install">
+    <h2>macOS</h2>
+    <ol>
+      <li>Download the <code>.app</code> zip and unzip it.</li>
+      <li>First launch: <strong>right-click the app &rsaquo; Open</strong>, then
+          confirm &mdash; this clears Gatekeeper for an unsigned app.</li>
+    </ol>
+  </div>
+
+  <div class="install">
+    <h2>Run from source</h2>
+<pre>git clone https://github.com/PrathyayPGM-ALT/ResetTheTime
+cd ResetTheTime
+pip install pygame numpy
+python main.py</pre>
+  </div>
+
+  <div class="cta-strip small">
+    <h2>Want to change how it looks?</h2>
+    <a class="btn ghost big" href="{{ url_for('mods_hub') }}">Get mods</a>
+  </div>
+</section>
+{% endblock %}
