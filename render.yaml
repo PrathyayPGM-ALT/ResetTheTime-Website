@@ -6,15 +6,24 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
-      # Where uploaded mods + the index are stored (mounted disk below).
-      - key: DATA_DIR
-        value: /var/data
       # Optional: set in the Render dashboard to enable VirusTotal scans.
       - key: VT_API_KEY
         sync: false
-    # Persistent disk so uploaded mods and the index survive redeploys/restarts.
-    # (Without a disk, Render's filesystem is ephemeral and wipes uploads.)
-    disk:
-      name: mods-data
-      mountPath: /var/data
-      sizeGB: 1
+
+    # NOTE on storage:
+    #  - The game builds under builds/ and any code live in the repo, so they
+    #    always deploy and persist.
+    #  - Uploaded mods (mods_store/ + index.json) are written at runtime. On the
+    #    FREE plan the filesystem is EPHEMERAL, so uploads are wiped on every
+    #    redeploy/restart. That's fine for testing.
+    #  - To make uploads durable, upgrade the plan and uncomment the disk below
+    #    (persistent disks are a paid feature), then it mounts at /var/data.
+    #
+    # plan: starter
+    # envVars:
+    #   - key: DATA_DIR
+    #     value: /var/data
+    # disk:
+    #   name: mods-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
